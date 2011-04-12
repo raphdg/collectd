@@ -178,8 +178,8 @@ static char *camqp_strerror (camqp_config_t *conf, /* {{{ */
             break;
 
         case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-            if (r.library_errno)
-                return (sstrerror (r.library_errno, buffer, buffer_size));
+            if (r.library_error)
+                return (sstrerror (r.library_error, buffer, buffer_size));
             else
                 sstrncpy (buffer, "End of stream", sizeof (buffer));
             break;
@@ -229,7 +229,7 @@ static int camqp_create_exchange (camqp_config_t *conf) /* {{{ */
             /* type        = */ amqp_cstring_bytes (conf->exchange_type),
             /* passive     = */ 0,
             /* durable     = */ 0,
-            /* auto_delete = */ 1,
+            /* auto_delete =  1,*/
             /* arguments   = */ AMQP_EMPTY_TABLE);
     if ((ed_ret == NULL) && camqp_is_error (conf))
     {
@@ -316,7 +316,8 @@ static int camqp_setup_queue (camqp_config_t *conf) /* {{{ */
             /* consumer_tag = */ AMQP_EMPTY_BYTES,
             /* no_local     = */ 0,
             /* no_ack       = */ 1,
-            /* exclusive    = */ 0);
+            /* exclusive    = */ 0,
+				 AMQP_EMPTY_TABLE);
     if ((cm_ret == NULL) && camqp_is_error (conf))
     {
         char errbuf[1024];
@@ -542,6 +543,7 @@ static void *camqp_subscribe_thread (void *user_data) /* {{{ */
 {
     camqp_config_t *conf = user_data;
     int status;
+    int interval = (int)CDTIME_T_TO_MS(interval_g);
 
     while (subscriber_threads_running)
     {
@@ -551,8 +553,8 @@ static void *camqp_subscribe_thread (void *user_data) /* {{{ */
         if (status != 0)
         {
             ERROR ("amqp plugin: camqp_connect failed. "
-                    "Will sleep for %i seconds.", interval_g);
-            sleep (interval_g);
+                    "Will sleep for %i seconds.",interval);
+            sleep (interval);
             continue;
         }
 
@@ -560,9 +562,9 @@ static void *camqp_subscribe_thread (void *user_data) /* {{{ */
         if (status < 0)
         {
             ERROR ("amqp plugin: amqp_simple_wait_frame failed. "
-                    "Will sleep for %i seconds.", interval_g);
+                    "Will sleep for %i seconds.", interval);
             camqp_close_connection (conf);
-            sleep (interval_g);
+            sleep (interval);
             continue;
         }
 
